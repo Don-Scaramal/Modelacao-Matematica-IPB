@@ -1,0 +1,62 @@
+%% Memorial de Cálculo: Sistemas Fotovoltaicos
+% Estudo de Caso: "cidade" , "distrito",  "país" | Data: "dia do nasicmento" (n=237)
+% Desenvolvido por:
+clear; clc;
+
+% 1. DEFINIÇÃO DOS DADOS (Luanda - Agosto)
+L = -8.827;          % Latitude
+n = 237;               % data
+sigma = 8.8;           % Inclinação que escolheste
+rho = 0.2;           % Albedo padrão
+IH_mensal = 113.5;  % PVGIS
+IH = IH_mensal / 31; % Média diária
+SC = 1.37;           % Constante Solar
+
+
+% Etapa 2: Declinação Solar (delta)
+delta = 23.45 * sind((360/365) * (n - 81));
+delta_rad = deg2rad(delta);
+
+% Etapa 3: Ângulo Horário do Nascer do Sol (H_SR)
+L_rad = deg2rad(L);
+cos_hsr = -tan(L_rad) * tan(delta_rad);
+H_SR_rad = acos(max(min(cos_hsr, 1), -1));
+H_SR_deg = rad2deg(H_SR_rad);
+
+% Etapa 4: Irradiação Extraterrestre (I0)
+termo_adj = 1 + 0.034 * cosd(360 * n / 365);
+geom = (cos(L_rad) * cos(delta_rad) * sin(H_SR_rad)) + (H_SR_rad * sin(L_rad) * sin(delta_rad));
+I0 = (24 / pi) * SC * termo_adj * geom;
+
+% Etapa 5 e 6: Índice de Clareza (KT) e Irradiação Difusa (IDH)
+KT = IH / I0;
+razao_difusa = 1.390 - 4.027*KT + 5.531*(KT^2) - 3.108*(KT^3);
+IDH = razao_difusa * IH;
+
+% Etapa 10 e 11: H_SRC e Fator de Inclinação (RB)
+S_rad = deg2rad(sigma);
+L_abs = abs(L_rad);
+delta_inv = -delta_rad; % Ajuste para face Norte no Hemisfério Sul
+termo_hsrc = -tan(L_abs - S_rad) * tan(delta_inv);
+H_SRC_rad = min(H_SR_rad, acos(max(min(termo_hsrc, 1), -1)));
+
+num = (cos(L_abs - S_rad) * cos(delta_inv) * sin(H_SRC_rad) + H_SRC_rad * sin(L_abs - S_rad) * sin(delta_inv));
+den = (cos(L_abs) * cos(delta_inv) * sin(H_SR_rad) + H_SR_rad * sin(L_abs) * sin(delta_inv));
+RB = num / den;
+
+% Etapa 12 e 13: Irradiação no Coletor (IBC e IC)
+IBH = IH - IDH;
+IDC = IDH * (1 + cos(S_rad)) / 2;
+IRC = rho * IH * (1 - cos(S_rad)) / 2;
+IBC = IBH * RB;
+IC = IBC + IDC + IRC;
+
+% 3. EXIBIÇÃO DOS RESULTADOS NO CONSOLE
+fprintf('--- MEMORIAL DE CÁLCULO: Angola, Luanda  ---\n');
+fprintf('Etapa 2: Declinação (delta) = %.2f graus\n', delta);
+fprintf('Etapa 3: H_SR = %.2f graus\n', H_SR_deg);
+fprintf('Etapa 4: I0 = %.2f kWh/m^2.dia\n', I0);
+fprintf('Etapa 5: KT = %.3f\n', KT);
+fprintf('Etapa 6: IDH = %.2f kWh/m^2.dia\n', IDH);
+fprintf('Etapa 11: RB = %.3f\n', RB);
+fprintf('Etapa 13: IC (Resultado Final) = %.2f kWh/m^2.dia\n', IC);
